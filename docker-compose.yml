@@ -1,0 +1,52 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:alpine
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./data:/var/lib/postgresql/data
+    networks:
+      - bootapp
+
+  rabbitmq:
+    image: rabbitmq:3.9.8-management-alpine
+    container_name: rabbitmq
+    restart: always
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    networks:
+      - bootapp
+
+  app:
+    build: ./backend
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - spring.datasource.url=jdbc:postgresql://db:5432/codeverse?createDatabaseIfNotExist=true
+      - spring.datasource.username=postgres
+      - spring.datasource.password=password
+      - spring.jpa.hibernate.ddl-auto=update
+      - spring.jpa.show-sql=true
+      - spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+      - spring.jpa.properties.hibernate.format-sql=true
+      - server.error.include-message=always
+      - spring.rabbitmq.host=rabbitmq
+      - spring.rabbitmq.port=5672
+      - spring.rabbitmq.username=guest
+      - spring.rabbitmq.password=guest
+      - rabbitmq.queue.name=codeverse_queue
+      - rabbitmq.queue.exchange=codeverse_exchange
+      - rabbitmq.queue.routing_key=routing_key
+    depends_on:
+      - db
+      - rabbitmq
+    networks:
+      - bootapp
+networks:
+  bootapp:
